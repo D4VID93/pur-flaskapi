@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Affichage des images depuis l'API Flask</title>
+</head>
+<body>
+  <h1>Affichage des images depuis l'API Flask</h1>
+  <div id="image-container"></div>
+
+  <script>
+    fetch('http://127.0.0.1:5000/documents')
+      .then(response => response.json())
+      .then(data => {
+        const container = document.getElementById('image-container');
+
+        data.forEach(item => {
+          // créer un conteneur pour chaque image
+          const div = document.createElement('div');
+          div.style.marginBottom = '20px';
+
+          // créer un titre avec le nom du fichier
+          const title = document.createElement('h3');
+          title.textContent = item.nom;
+          div.appendChild(title);
+
+          // créer l'image avec le lien
+          const img = document.createElement('img');
+          img.src = item.lien;
+          img.alt = item.nom;
+          img.style.maxWidth = '300px';  // limite la taille max
+          div.appendChild(img);
+
+          container.appendChild(div);
+        });
+      })
+      .catch(error => {
+        console.error('Erreur:', error);
+        const container = document.getElementById('image-container');
+        container.textContent = 'Erreur lors du chargement des images.';
+      });
+  </script>
+</body>
+</html>
