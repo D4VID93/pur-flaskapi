@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, redirect
+from flask import Flask, jsonify, redirect, render_template_string
 from flask_cors import CORS
 import psycopg2
 
@@ -23,8 +23,39 @@ def get_documents():
     cur.close()
     conn.close()
 
-    data = [{"nom": r[0], "lien": r[1]} for r in rows]
-    return jsonify(data)
+    # Génération du HTML
+    html = """
+    <html>
+    <head>
+        <title>Documents Images</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .gallery { display: flex; flex-wrap: wrap; gap: 20px; }
+            .item { width: 300px; text-align: center; }
+            .item img { max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px; }
+            .item p { margin-top: 8px; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <h2>Images de la base de données</h2>
+        <div class="gallery">
+    """
+
+    for nom, lien in rows:
+        html += f'''
+        <div class="item">
+            <img src="{lien}" alt="{nom}" />
+            <p>{nom}</p>
+        </div>
+        '''
+
+    html += """
+        </div>
+    </body>
+    </html>
+    """
+
+    return render_template_string(html)
 
 if __name__ == '__main__':
     app.run(debug=True)
