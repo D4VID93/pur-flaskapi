@@ -1,14 +1,26 @@
 from flask import Flask, jsonify, redirect, render_template_string
 from flask_cors import CORS
 import psycopg2
+import urllib.parse
 
 app = Flask(__name__)
-CORS(app)  # <-- Ajout simple pour autoriser toutes les origines
+CORS(app)
+
+def transformer_lien_sharepoint(lien):
+    if "AllItems.aspx" in lien and "id=" in lien:
+        try:
+            id_part = lien.split("id=")[1].split("&")[0]
+            chemin_decode = urllib.parse.unquote(id_part)
+            return "https://purprojet.sharepoint.com" + chemin_decode
+        except Exception:
+            return lien  # retourne le lien d'origine si erreur
+    else:
+        return lien  # déjà un lien direct
 
 @app.route('/')
 def index():
     return redirect('/documents')
-    
+
 @app.route('/documents')
 def get_documents():
     conn = psycopg2.connect(
@@ -23,7 +35,6 @@ def get_documents():
     cur.close()
     conn.close()
 
-    # Génération du HTML
     html = """
     <html>
     <head>
@@ -42,9 +53,10 @@ def get_documents():
     """
 
     for nom, lien in rows:
+        lien_direct = transformer_lien_sharepoint(lien)
         html += f'''
         <div class="item">
-            <img src="{lien}" alt="{nom}" />
+            <img src="{lien_direct}" alt="{nom}" />
             <p>{nom}</p>
         </div>
         '''
