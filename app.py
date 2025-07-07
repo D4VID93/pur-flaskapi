@@ -5,6 +5,10 @@ import psycopg2
 app = Flask(__name__)
 CORS(app)  # <-- Ajout simple pour autoriser toutes les origines
 
+@app.route('/')
+def index():
+    return redirect('/documents')
+    
 @app.route('/documents')
 def get_documents():
     conn = psycopg2.connect(
