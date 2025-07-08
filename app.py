@@ -69,5 +69,29 @@ def get_documents():
 
     return render_template_string(html)
 
+@app.route('/documents/json')
+def get_documents_json():
+    conn = psycopg2.connect(
+        host='testcantodb.postgres.database.azure.com',
+        database='postgres',
+        user='admin_db',
+        password='Da2025$2025@'
+    )
+    cur = conn.cursor()
+    cur.execute("SELECT nom_fichier, lien_telechargement FROM documents;")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    result = []
+    for nom, lien in rows:
+        lien_direct = transformer_lien_sharepoint(lien)
+        result.append({
+            "nom": nom,
+            "url": lien_direct
+        })
+
+    return jsonify(result)
+
 if __name__ == '__main__':
     app.run(debug=True)
