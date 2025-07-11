@@ -1,34 +1,23 @@
-from flask import Flask, jsonify, redirect, render_template_string
+from flask import Flask, jsonify, render_template_string
 from flask_cors import CORS
 import psycopg2
-import urllib.parse
 
 app = Flask(__name__)
 CORS(app)
 
-def transformer_lien_sharepoint(lien):
-    if "AllItems.aspx" in lien and "id=" in lien:
-        try:
-            id_part = lien.split("id=")[1].split("&")[0]
-            chemin_decode = urllib.parse.unquote(id_part)
-            return "https://purprojet.sharepoint.com" + chemin_decode
-        except Exception:
-            return lien  # retourne le lien d'origine si erreur
-    else:
-        return lien  # déjà un lien direct
+# ===== CONFIGURATION DB =====
+DB_CONFIG = {
+    'host': 'testcantodb.postgres.database.azure.com',
+    'database': 'postgres',
+    'user': 'admin_db',
+    'password': 'Da2025$2025@',
+    'port': '5432'
+}
 
+# ===== ROUTE PRINCIPALE : PAGE HTML =====
 @app.route('/')
 def index():
-    return redirect('/documents')
-
-@app.route('/documents')
-def get_documents():
-    conn = psycopg2.connect(
-        host='testcantodb.postgres.database.azure.com',
-        database='postgres',
-        user='admin_db',
-        password='Da2025$2025@'
-    )
+    conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
     cur.execute("SELECT nom_fichier, lien_telechargement FROM documents;")
     rows = cur.fetchall()
@@ -38,26 +27,49 @@ def get_documents():
     html = """
     <html>
     <head>
-        <title>Documents Images</title>
+        <title>Galerie d'images</title>
         <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .gallery { display: flex; flex-wrap: wrap; gap: 20px; }
-            .item { width: 300px; text-align: center; }
-            .item img { max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px; }
-            .item p { margin-top: 8px; font-weight: bold; }
+            body {
+                font-family: Arial, sans-serif;
+                padding: 30px;
+                background-color: #f8f9fa;
+            }
+            h2 {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            .gallery {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 20px;
+            }
+            .item {
+                text-align: center;
+                transition: transform 0.2s;
+            }
+            .item:hover {
+                transform: scale(1.05);
+            }
+            .item img {
+                width: 100%;
+                height: auto;
+                border-radius: 10px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                cursor: pointer;
+            }
         </style>
     </head>
     <body>
-        <h2>Images de la base de données</h2>
+        <h2>Galerie des documents stockés</h2>
         <div class="gallery">
     """
 
     for nom, lien in rows:
-        lien_direct = transformer_lien_sharepoint(lien)
         html += f'''
         <div class="item">
-            <img src="{lien_direct}" alt="{nom}" />
-            <p>{nom}</p>
+            <a href="{lien}" target="_blank">
+                <img src="{lien}" alt="{nom}" title="{nom}" />
+            </a>
         </div>
         '''
 
@@ -66,32 +78,24 @@ def get_documents():
     </body>
     </html>
     """
-
     return render_template_string(html)
 
+# ===== ROUTE JSON OPTIONNELLE =====
 @app.route('/documents/json')
 def get_documents_json():
-    conn = psycopg2.connect(
-        host='testcantodb.postgres.database.azure.com',
-        database='postgres',
-        user='admin_db',
-        password='Da2025$2025@'
-    )
+    conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
     cur.execute("SELECT nom_fichier, lien_telechargement FROM documents;")
     rows = cur.fetchall()
     cur.close()
     conn.close()
 
-    result = []
-    for nom, lien in rows:
-        lien_direct = transformer_lien_sharepoint(lien)
-        result.append({
-            "nom": nom,
-            "url": lien_direct
-        })
-
+    result = [
+        {"nom": nom, "url": lien}
+        for nom, lien in rows
+    ]
     return jsonify(result)
 
+# ===== LANCEMENT LOCAL =====
 if __name__ == '__main__':
     app.run(debug=True)
