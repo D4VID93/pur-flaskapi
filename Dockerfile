@@ -1,16 +1,17 @@
-# Dockerfile
-
-# Utilise une image Python officielle
+# Utilise une image Python officielle légère
 FROM python:3.10-slim
 
-# Crée un dossier dans le conteneur
+# Crée un dossier de travail dans le conteneur
 WORKDIR /app
 
-# Copie le code dans l'image
+# Copie les fichiers locaux dans le conteneur
 COPY . .
 
-# Installe les dépendances
-RUN pip install flask psycopg2-binary
+# Donne les droits d'exécution à startup.sh
+RUN chmod +x startup.sh
 
-# Définit la commande de lancement
-CMD ["python", "api.py"]
+# Installe les dépendances listées dans requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Définit la commande de lancement avec Gunicorn via startup.sh
+CMD ["./startup.sh"]
