@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta name="robots" content="noarchive, nofollow">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Library</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #16677c;
+      padding: 20px 30px;
+      display: flex;
+      align-items: center;
+      color: white;
+      gap: 20px;
+    }
+
+    .logo {
+      height: 50px;
+      background-color: white;
+      padding: 4px;
+      border-radius: 6px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2.8rem;
+      flex-grow: 1;
+      text-align: center;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #ffffff;
+      text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .controls button,
+    .controls select {
+      background-color: #fdfefe;
+      border: none;
+      border-radius: 25px;
+      padding: 10px 16px;
+      color: rgb(22, 103, 124);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .controls button:hover,
+    .controls select:hover {
+      background-color: #97d8e4;
+    }
+
+    .controls button.active {
+      background-color: #97d8e4;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    .back-btn {
+      background-color: #fcfdfd;
+      border-radius: 25px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: rgb(22, 103, 124);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .back-btn:hover {
+      background-color: #97d8e4;
+    }
+
+    .search-bar {
+      margin: 30px auto 20px;
+      max-width: 700px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .search-bar input {
+      flex-grow: 1;
+      padding: 12px 16px;
+      border-radius: 25px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      outline: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    #fileCount {
+      font-weight: 600;
+      color: #333;
+      min-width: 140px;
+      text-align: right;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+      transition: all 0.3s ease;
+    }
+
+    /* Mode liste */
+    body.list-view .gallery {
+      display: block;
+      max-width: 900px;
+      margin: 20px auto;
+    }
+
+    .gallery-item {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .gallery-item:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Mode liste: items en ligne */
+    body.list-view .gallery-item {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 15px;
+      padding: 10px;
+      text-align: left;
+      height: auto;
+    }
+
+    /* Styles pour le lazy loading */
+    .gallery-item img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 8px;
+      background: #f5f5f5;
+      transition: opacity 0.3s ease;
+    }
+
+    .gallery-item img[loading="lazy"] {
+      opacity: 0;
+    }
+
+    .gallery-item img[data-loaded="true"] {
+      opacity: 1;
+    }
+
+    .img-placeholder {
+      width: 100%;
+      height: 150px;
+      background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%);
+      background-size: 200% 100%;
+      animation: 1.5s shine linear infinite;
+      border-radius: 8px;
+    }
+
+    @keyframes shine {
+      to {
+        background-position-x: -200%;
+      }
+    }
+
+    /* Mode liste: taille images plus petite */
+    body.list-view .gallery-item img {
+      width: 120px;
+      height: 80px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .file-preview {
+      padding: 50px 10px;
+      font-size: 13px;
+      background-color: #f4f4f4;
+      color: #555;
+      border-radius: 8px;
+      margin: auto;
+      width: 80%;
+      white-space: normal;
+    }
+
+    .image-title {
+      padding: 10px 12px;
+      font-size: 14px;
+      color: #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-grow: 1;
+    }
+
+    /* Mode liste: titre avec plus d'espace */
+    body.list-view .image-title {
+      white-space: normal;
+      flex-grow: 1;
+    }
+
+    .item-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 8px 12px;
+      margin-top: auto;
+      background-color: #f8f9fa;
+      border-top: 1px solid #eee;
+    }
+
+    .download-btn,
+    .copy-link-btn,
+    .exclusive-btn {
+      background-color: rgba(0,0,0,0.6);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .download-btn:hover,
+    .copy-link-btn:hover,
+    .exclusive-btn:hover {
+      background-color: rgba(0,0,0,0.8);
+    }
+
+    .exclusive-btn.exclusive {
+      background-color: #d9534f;
+    }
+
+    .exclusive-btn.exclusive:hover {
+      background-color: #c9302c;
+    }
+
+    /* Mode liste: boutons repositionnés */
+    body.list-view .item-footer {
+      margin-left: auto;
+      padding: 8px;
+      background-color: transparent;
+      border-top: none;
+    }
+
+    /* Pagination styles */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 30px 0;
+      gap: 5px;
+    }
+
+    .page-btn {
+      background-color: #16677c;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: background-color 0.3s;
+      font-size: 14px;
+    }
+
+    .page-btn:hover {
+      background-color: #0d4555;
+    }
+
+    .page-btn.active {
+      background-color: #0d4555;
+      font-weight: bold;
+    }
+
+    .page-btn.disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .page-dots {
+      padding: 8px 12px;
+      color: #333;
+    }
+
+    .warning-message {
+      text-align: center;
+      color: #d9534f;
+      margin: 20px 0;
+      font-weight: bold;
+    }
+
+    .tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .download-btn:hover .tooltip,
+    .copy-link-btn:hover .tooltip,
+    .exclusive-btn:hover .tooltip {
+      opacity: 1;
+    }
+
+    /* Ajustements pour les PDF et iframes */
+    .gallery-item iframe {
+      border: none;
+      min-height: 200px;
+      margin-bottom: -4px;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background-color: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 1000px;
+      max-height: 90vh;
+      display: flex;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-preview {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      background-color: #f5f5f5;
+      max-height: 80vh;
+      overflow: auto;
+    }
+
+    .modal-preview img {
+      max-width: 100%;
+      max-height: 80vh;
+      object-fit: contain;
+    }
+
+    .modal-preview iframe {
+      width: 100%;
+      height: 80vh;
+      border: none;
+    }
+
+    .modal-preview video {
+      max-width: 100%;
+      max-height: 80vh;
+    }
+
+    .modal-info {
+      width: 300px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      word-break: break-all;
+    }
+
+    .modal-description {
+      margin-bottom: 20px;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    .modal-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 20px;
+    }
+
+    .modal-tag {
+      background-color: #e1f5fe;
+      color: #0288d1;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .modal-actions {
+      margin-top: auto;
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal-action-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 4px;
+      border: none;
+      background-color: #16677c;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .modal-action-btn:hover {
+      background-color: #0d4555;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: white;
+      font-size: 20px;
+    }
+
+    .close-btn:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .file-date {
+      display: block;
+      margin-top: 10px;
+      color: #777;
+      font-size: 12px;
+    }
+
+    /* Style pour les groupes de dates */
+    .date-group {
+      margin: 30px 0 10px;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #16677c;
+      color: #16677c;
+      font-weight: bold;
+      font-size: 1.2rem;
+      grid-column: 1 / -1;
+    }
+
+    /* Ajustement pour le mode liste */
+    body.list-view .date-group {
+      margin-left: 20px;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        padding: 15px;
+      }
+
+      header h1 {
+        font-size: 2rem;
+        margin: 10px 0;
+      }
+
+      .controls {
+        justify-content: center;
+        width: 100%;
+      }
+
+      .search-bar {
+        flex-direction: column;
+        padding: 0 15px;
+      }
+
+      #fileCount {
+        text-align: center;
+        margin-top: 10px;
+      }
+
+      .gallery {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+
+      body.list-view .gallery-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      body.list-view .item-footer {
+        margin: 10px 0 0 0;
+        align-self: flex-start;
+      }
+
+      .pagination {
+        flex-wrap: wrap;
+      }
+
+      .modal-content {
+        flex-direction: column;
+        width: 95%;
+        max-height: 95vh;
+      }
+
+      .modal-preview {
+        max-height: 50vh;
+      }
+
+      .modal-preview img,
+      .modal-preview iframe,
+      .modal-preview video {
+        max-height: 50vh;
+      }
+
+      .modal-info {
+        width: auto;
+        padding: 15px;
+      }
+
+      .modal-actions {
+        margin-top: 20px;
+      }
+
+      .modal-dates {
+    margin-bottom: 20px;
+    color: #555;
+    font-size: 14px;
+      }
+
+      .modal-dates div {
+          margin-bottom: 5px;
+      }
+
+      .date-input {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-family: inherit;
+          font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="https://comptestockageapi.blob.core.windows.net/testcanto/01_New_PUR_LOGO_Color.png" alt="Logo PUR" class="logo" />
+    <h1>Media Library</h1>
+    <div class="controls">
+      <a href="https://purprojet.sharepoint.com/sites/AdminToolKit/SitePages/PUR-Admin-ToolKit.aspx" class="back-btn" target="_blank" rel="noopener noreferrer" title="↩ Back to Admin Toolkit"> ↩️ Back to Admin Toolkit</a>
+      <button id="ascSortBtn">Sort A-Z</button>
+      <button id="descSortBtn">Sort Z-A</button>
+      <button id="sortByDateBtn">Sort by Date</button>
+      <button id="toggleViewBtn">List View</button>
+      <button id="togglePaginationBtn" class="{% if not show_all %}active{% endif %}">
+        {% if show_all %}Pagination Mode{% else %}Show All Files{% endif %}
+      </button>
+      <select id="filterSelect" title="Filtrer les fichiers">
+        <option value="all">All Files</option>
+        <option value="images">Images</option>
+        <option value="videos">Videos</option>
+        <option value="audio">Audio</option>
+        <option value="documents">Documents</option>
+        <option value="presentations">Presentations</option>
+        <option value="exclusive">Exclusive Files</option>
+        <option value="others">Others</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Find a file..." />
+    <div id="fileCount">Showing {{ images|length }} of {{ total_files }} files</div>
+  </div>
+
+  {% if show_all %}
+  <div class="warning-message">
+    Warning: Displaying all files may impact performance with large collections
+  </div>
+  {% endif %}
+
+  <div class="gallery" id="gallery">
+  {% for file in files %}
+  <div class="gallery-item" data-tags="{{ file.tags | join(', ') | lower }}" data-name="{{ file.nom|lower }}" data-link="{{ file.lien }}" data-filename="{{ file.nom }}" data-description="{{ file.description }}" data-tags="{{ file.tags|tojson }}" data-exclusive="{{ 'true' if file.is_exclusive is true else 'false' }}" {% if file.date_ajout %}data-date="{{ file.date_ajout.strftime('%d-%m-%Y') }}"{% endif %}>
+    {% set ext = file.nom.split('.')[-1]|lower %}
+
+    {% if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp'] %}
+      <div class="img-placeholder"></div>
+      <img src="{{ file.lien }}" alt="{{ file.nom }}" loading="lazy" />
+
+    {% elif ext in ['heic', 'thm', 'psd', 'docx', 'pptx', 'emf'] %}
+      <img src="/static/icons/{{ ext }}.png" alt="{{ file.nom }}" style="max-height: 200px;" loading="lazy" />
+
+    {% elif ext in ['docx', 'pptx'] %}
+      <iframe src="https://view.officeapps.live.com/op/view.aspx?src={{ file.lien | url_encode }}"
+              width="100%" height="250px" style="border: none;" loading="lazy" preload="none"></iframe>
+
+    {% elif ext == 'pdf' %}
+      <iframe src="{{ file.lien }}" width="100%" height="200px"
+              style="border: 1px solid #ccc; border-radius: 8px;" loading="lazy" preload="none"></iframe>
+
+    {% elif ext == 'emf' %}
+      <iframe src="{{ file.lien }}" width="100%" height="200px"
+              style="border: 1px solid #ccc; border-radius: 8px;" loading="lazy"></iframe>
+
+    {% elif ext in ['mp4', 'webm', 'mov'] %}
+      <video controls width="100%" style="max-height: 250px; border-radius: 8px;" preload="none">
+        <source src="{{ file.lien }}" type="video/{{ ext }}">
+        Your browser does not support the video.
+      </video>
+
+    {% elif ext in ['mp3', 'wav'] %}
+      <audio controls style="width: 100%;" preload="none">
+        <source src="{{ file.lien }}" type="audio/{{ ext }}">
+        Your browser does not support audio.
+      </audio>
+
+    {% else %}
+<div class="file-preview" loading="lazy" style="text-align:center;">
+  <img src="/static/No_preview.png" alt="No preview available" style="max-width:150px; max-height:150px;" loading="lazy" />
+  <div><small>{{ ext|upper }}</small></div>
+</div>
+{% endif %}
+
+    <div class="image-title">{{ file.nom }}</div>
+    <div class="item-footer">
+      <button class="copy-link-btn" data-link="{{ file.lien }}">
+        <span class="tooltip">Copy The Link</span>🔗
+      </button>
+      <a href="/download?url={{ file.lien }}&filename={{ file.nom }}" class="download-btn">
+        <span class="tooltip">Download</span>⬇
+      </a>
+      <button class="exclusive-btn {% if file.is_exclusive %}exclusive{% endif %}" 
+              data-filename="{{ file.nom }}" 
+              data-exclusive="{{ 'true' if file.is_exclusive else 'false' }}">
+        <span class="tooltip">{% if file.is_exclusive %}Exclusive{% else %}Not Exclusive{% endif %}</span>
+        {% if file.is_exclusive %}★{% else %}☆{% endif %}
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if not show_all %}
+<!-- Pagination -->
+<div class="pagination">
+  {% if current_page > 1 %}
+    <a href="{{ url_for('index', page=current_page-1) }}" class="page-btn">Previous</a>
+  {% else %}
+    <span class="page-btn disabled">Previous</span>
+  {% endif %}
+
+  {% if current_page > 3 %}
+    <a href="{{ url_for('index', page=1) }}" class="page-btn">1</a>
+    {% if current_page > 4 %}
+      <span class="page-dots">...</span>
+    {% endif %}
+  {% endif %}
+
+  {% for page_num in range([1, current_page-2]|max, [current_page+3, total_pages+1]|min) %}
+    <a href="{{ url_for('index', page=page_num) }}" class="page-btn {% if page_num == current_page %}active{% endif %}">
+      {{ page_num }}
+    </a>
+  {% endfor %}
+
+  {% if current_page < total_pages - 2 %}
+    {% if current_page < total_pages - 3 %}
+      <span class="page-dots">...</span>
+    {% endif %}
+    <a href="{{ url_for('index', page=total_pages) }}" class="page-btn">{{ total_pages }}</a>
+  {% endif %}
+
+  {% if current_page < total_pages %}
+    <a href="{{ url_for('index', page=current_page+1) }}" class="page-btn">Next</a>
+  {% else %}
+    <span class="page-btn disabled">Next</span>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Modal -->
+<div class="modal-overlay" id="fileModal">
+  <button class="close-btn" id="closeModal">&times;</button>
+  <div class="modal-content">
+    <div class="modal-preview" id="modalPreview">
+      <!-- Preview content will be inserted here -->
+    </div>
+    <div class="modal-info">
+      <div class="modal-title" id="modalTitle"></div>
+      <div class="modal-description" id="modalDescription"></div>
+      <div class="modal-dates">
+    <div><strong>Added on:</strong> <span id="modalAddedDate"></span></div>
+    <div><strong>Event Date:</strong> <span id="modalEventDate"></span></div>
+    </div>
+      <div class="modal-tags" id="modalTags"></div>
+      <div class="modal-actions">
+        <button class="modal-action-btn" id="modalCopyBtn">
+          <span>Copy Link</span>
+        </button>
+        <a href="#" class="modal-action-btn" id="modalDownloadBtn" download>
+          <span>Download</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    const searchInput = document.getElementById("searchInput");
+    const gallery = document.getElementById("gallery");
+    const ascSortBtn = document.getElementById("ascSortBtn");
+    const descSortBtn = document.getElementById("descSortBtn");
+    const sortByDateBtn = document.getElementById("sortByDateBtn");
+    const toggleViewBtn = document.getElementById("toggleViewBtn");
+    const togglePaginationBtn = document.getElementById("togglePaginationBtn");
+    const filterSelect = document.getElementById("filterSelect");
+    const fileCount = document.getElementById("fileCount");
+    const fileModal = document.getElementById("fileModal");
+    const closeModal = document.getElementById("closeModal");
+    const modalPreview = document.getElementById("modalPreview");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalDescription = document.getElementById("modalDescription");
+    const modalTags = document.getElementById("modalTags");
+    const modalCopyBtn = document.getElementById("modalCopyBtn");
+    const modalDownloadBtn = document.getElementById("modalDownloadBtn");
+    const modalAddedDate = document.getElementById("modalAddedDate");
+    const modalEventDate = document.getElementById("modalEventDate");
+    const UPLOAD_SECRET = "superTokenOps2025";
+    let isListView = false;
+    let isSortedByDate = false;
+
+    const fileTypeMap = {
+      images: ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'],
+      videos: ['.mp4', '.mov', '.avi', '.wmv', '.flv', '.mkv', '.webm'],
+      audio: ['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a'],
+      documents: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt', '.rtf', '.odt'],
+      presentations: ['.ppt', '.pptx', '.key', '.odp']
+    };
+
+    function getFileExtension(filename) {
+      return filename.slice(filename.lastIndexOf('.')).toLowerCase();
+    }
+
+    function formatDateForDisplay(dateString) {
+      if (!dateString) return "No date";
+  
+      // Vérifie si la date est déjà au format DD-MM-YYYY
+      if (/^\d{2}-\d{2}-\d{4}$/.test(dateString)) {
+        return dateString; // Retourne tel quel si deja dans le bon format
+      }
+      
+      try {
+        // Si c'est une date au format ISO ou autre, on la formate
+        const [day, month, year] = dateString.split('-');
+        return `${day}-${month}-${year}`;
+      } catch (e) {
+        console.error("Error formatting date:", e);
+        return "Invalid date";
+      }
+    }
+
+    function groupFilesByDate() {
+      const gallery = document.getElementById("gallery");
+      const items = Array.from(gallery.querySelectorAll(".gallery-item"));
+      
+      // on crée un objet pour regrouper les fichiers par date
+      const filesByDate = {};
+      
+      items.forEach(item => {
+        const date = item.getAttribute("data-date");
+        if (!date) return;
+        
+        // Vérifie que la date est valide
+        if (!/^\d{2}-\d{2}-\d{4}$/.test(date)) {
+          console.warn("Invalid date format:", date);
+          return;
+        }
+        
+        if (!filesByDate[date]) {
+          filesByDate[date] = [];
+        }
+        filesByDate[date].push(item);
+      });
+      
+      // trie les dates par ordre décroissant
+      const sortedDates = Object.keys(filesByDate).sort((a, b) => {
+        const [dayA, monthA, yearA] = a.split('-').map(Number);
+        const [dayB, monthB, yearB] = b.split('-').map(Number);
+        const dateA = new Date(yearA, monthA - 1, dayA);
+        const dateB = new Date(yearB, monthB - 1, dayB);
+        return dateB - dateA;
+      });
+      
+      // Vide la galerie
+      gallery.innerHTML = '';
+      
+      // Ajoute les fichiers groupés par date
+      sortedDates.forEach(date => {
+        // crée un en-tête de groupe
+        const dateHeader = document.createElement("div");
+        dateHeader.className = "date-group";
+        dateHeader.textContent = date; // Utilise directement la date au format DD-MM-YYYY
+        gallery.appendChild(dateHeader);
+        
+        // Ajoute les fichiers de cette date
+        filesByDate[date].forEach(item => {
+          gallery.appendChild(item);
+        });
+      });
+    }
+
+    function filterAndDisplay() {
+      const searchValue = searchInput.value.toLowerCase();
+      const filterValue = filterSelect.value;
+      let visibleCount = 0;
+
+      const items = gallery.querySelectorAll(".gallery-item");
+      items.forEach(item => {
+        const name = item.getAttribute("data-name").toLowerCase();
+        const tags = item.getAttribute("data-tags")?.toLowerCase() || "";
+        const ext = getFileExtension(name);
+        const isExclusive = item.getAttribute("data-exclusive") === 'true';
+
+        let show = name.includes(searchValue) || tags.includes(searchValue);
+
+        if (show) {
+          if (filterValue === 'all') {
+            show = true;
+          } else if (filterValue === 'exclusive') {
+            show = isExclusive === true || isExclusive === 'true';
+          } else if (filterValue === 'others') {
+            const allExts = [].concat(...Object.values(fileTypeMap));
+            show = !allExts.includes(ext);
+          } else {
+            show = fileTypeMap[filterValue]?.includes(ext) || false;
+          }
+        }
+
+        item.style.display = show ? "block" : "none";
+        if (show) visibleCount++;
+      });
+
+      fileCount.textContent = `Showing ${visibleCount} of {{ total_files }} files`;
+      lazyLoadImages();
+    }
+
+    function sortGallery(asc = true) {
+      const items = Array.from(gallery.children).filter(item => item.classList.contains('gallery-item'));
+      items.sort((a, b) => {
+        const nameA = a.getAttribute("data-name");
+        const nameB = b.getAttribute("data-name");
+        return asc ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+      });
+      
+      // Réinsère les éléments triés en ignorant les en-têtes de date
+      items.forEach(item => gallery.appendChild(item));
+      
+      filterAndDisplay();
+    }
+
+    // Lazy loading amélioré
+    function lazyLoadImages() {
+      const lazyImages = document.querySelectorAll('img[loading="lazy"]');
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            const placeholder = img.previousElementSibling;
+            
+            img.onload = function() {
+              img.setAttribute('data-loaded', 'true');
+              if (placeholder && placeholder.classList.contains('img-placeholder')) {
+                placeholder.style.display = 'none';
+              }
+            };
+            
+            if (!img.src || img.src !== img.dataset.src) {
+              img.src = img.dataset.src || img.getAttribute('src');
+            }
+            
+            observer.unobserve(img);
+          }
+        });
+      }, {
+        rootMargin: '50px 0px',
+        threshold: 0.01
+      });
+
+      lazyImages.forEach(img => {
+        if (!img.dataset.src) {
+          img.dataset.src = img.getAttribute('src');
+          img.removeAttribute('src');
+        }
+        observer.observe(img);
+      });
+    }
+
+    // Gestion du bouton de pagination
+    togglePaginationBtn.addEventListener("click", () => {
+      const currentUrl = new URL(window.location.href);
+      const showAll = currentUrl.searchParams.get("show_all") === "true";
+      
+      if (showAll) {
+        currentUrl.searchParams.delete("show_all");
+        currentUrl.searchParams.delete("page");
+      } else {
+        currentUrl.searchParams.set("show_all", "true");
+      }
+      
+      window.location.href = currentUrl.toString();
+    });
+
+    // Mode liste/galerie
+    toggleViewBtn.addEventListener("click", () => {
+      isListView = !isListView;
+      document.body.classList.toggle("list-view", isListView);
+      toggleViewBtn.textContent = isListView ? "Gallery View" : "List View";
+      lazyLoadImages();
+    });
+
+    // Tri par date
+    sortByDateBtn.addEventListener("click", function() {
+      isSortedByDate = !isSortedByDate;
+      this.classList.toggle("active", isSortedByDate);
+      
+      if (isSortedByDate) {
+        groupFilesByDate();
+      } else {
+        // Revenir à l'affichage normal
+        filterAndDisplay();
+      }
+    });
+
+    // Fonction pour copier le lien
+    function setupCopyLinkButtons() {
+      const copyButtons = document.querySelectorAll('.copy-link-btn');
+      copyButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const link = button.getAttribute('data-link');
+          navigator.clipboard.writeText(link)
+            .then(() => {
+              const tooltip = button.querySelector('.tooltip');
+              if (tooltip) {
+                tooltip.textContent = 'Link copied!';
+                setTimeout(() => {
+                  tooltip.textContent = 'Copy The Link';
+                }, 2000);
+              }
+            })
+            .catch(err => {
+              console.error('Erreur lors de la copie: ', err);
+            });
+        });
+      });
+    }
+
+    // Fonction pour gérer les boutons exclusifs
+    function setupExclusiveButtons() {
+      const exclusiveButtons = document.querySelectorAll('.exclusive-btn');
+      console.log(`Found ${exclusiveButtons.length} exclusive buttons`);
+
+      exclusiveButtons.forEach(button => {
+        const isExclusive = button.getAttribute('data-exclusive') === 'true';
+        console.log(`Button for ${button.getAttribute('data-filename')}: exclusive=${isExclusive}`);
+        button.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const filename = button.getAttribute('data-filename');
+          const isExclusive = button.getAttribute('data-exclusive') === 'true';
+          
+          try {
+            const response = await fetch(`/update_exclusive?token=${UPLOAD_SECRET}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: `filename=${encodeURIComponent(filename)}&is_exclusive=${!isExclusive}`
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              button.setAttribute('data-exclusive', data.is_exclusive.toString());
+              button.classList.toggle('exclusive', data.is_exclusive);
+              button.innerHTML = `<span class="tooltip">${data.is_exclusive ? 'Exclusive' : 'Not Exclusive'}</span>${data.is_exclusive ? '★' : '☆'}`;
+              
+              // Mettre à jour l'attribut data-exclusive sur l'élément parent
+              const galleryItem = button.closest('.gallery-item');
+              if (galleryItem) {
+                galleryItem.setAttribute('data-exclusive', data.is_exclusive.toString());
+              }
+            } else {
+              console.error('Failed to update exclusive status');
+            }
+          } catch (error) {
+            console.error('Error:', error);
+          }
+        });
+      });
+    }
+
+    // Fonction pour afficher le modal
+    async function showFileModal(item) {
+    const filename = item.getAttribute('data-filename');
+    const link = item.getAttribute('data-link');
+    const ext = getFileExtension(filename);
+    
+    // Mettre à jour les infos de base du modal
+    modalTitle.textContent = filename;
+    modalDownloadBtn.href = `/download?url=${encodeURIComponent(link)}&filename=${filename}`;
+    
+    // Afficher un indicateur de chargement
+    modalDescription.innerHTML = "<div style='text-align:center;'><p>Loading details...</p></div>";
+    modalTags.innerHTML = "<span class='modal-tag'>Loading...</span>";
+    
+    try {
+        // Récupérer les détails supplémentaires via API
+        const response = await fetch(`/file_details?filename=${encodeURIComponent(filename)}`);
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Mettre à jour la description
+            const descriptionHTML = data.description 
+                ? `<p>${data.description}</p>`
+                : "<p>No description available</p>";
+
+            modalDescription.innerHTML = descriptionHTML;
+
+            modalAddedDate.textContent = data.date_ajout || "Unknown";
+            modalEventDate.textContent = data.date_event || "Not specified";
+
+            // Mettre à jour les tags
+            if (data.tags && data.tags.length > 0) {
+                modalTags.innerHTML = data.tags.map(tag => 
+                    `<span class="modal-tag">${tag}</span>`
+                ).join('');
+            } else {
+                modalTags.innerHTML = "<span class='modal-tag'>No tags</span>";
+            }
+
+            // Ajouter le tag exclusif si nécessaire
+            if (data.is_exclusive) {
+                modalTags.innerHTML += `<span class="modal-tag" style="background-color:#d9534f;color:white;">★ Exclusive</span>`;
+            }
+            
+            // Stocker la date dans l'élément
+            if (data.date_ajout) {
+                item.setAttribute('data-date', data.date_ajout);
+            }
+        } else {
+            modalDescription.innerHTML = "<p>Could not load details</p>";
+            modalTags.innerHTML = "<span class='modal-tag'>Error loading tags</span>";
+        }
+    } catch (error) {
+        console.error('Error fetching file details:', error);
+        modalDescription.innerHTML = "<p>Error loading details</p>";
+        modalTags.innerHTML = "<span class='modal-tag'>Error</span>";
+    }
+    
+    // Créer le contenu de prévisualisation en fonction du type de fichier
+    let previewContent = '';
+    
+    if (fileTypeMap.images.includes(ext)) {
+        previewContent = `<img src="${link}" alt="${filename}" />`;
+    } else if (fileTypeMap.videos.includes(ext)) {
+        previewContent = `<video controls autoplay style="width:100%; max-height:80vh;">
+                          <source src="${link}" type="video/${ext.slice(1)}">
+                          Your browser does not support the video.
+                        </video>`;
+    } else if (fileTypeMap.audio.includes(ext)) {
+        previewContent = `<audio controls autoplay style="width:100%;">
+                          <source src="${link}" type="audio/${ext.slice(1)}">
+                          Your browser does not support audio.
+                        </audio>`;
+    } else if (ext === '.pdf') {
+        previewContent = `<iframe src="${link}" width="100%" height="100%" style="border:none;"></iframe>`;
+    } else if (['.docx', '.pptx'].includes(ext)) {
+        previewContent = `<iframe src="https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(link)}" 
+                              width="100%" height="100%" style="border:none;"></iframe>`;
+    } else {
+        previewContent = `<div class="file-preview" style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                          <div style="font-size:24px; margin-bottom:10px;">${ext.toUpperCase()}</div>
+                          <div>Preview not available</div>
+                        </div>`;
+    }
+    
+    modalPreview.innerHTML = previewContent;
+    fileModal.classList.add('active');
+    
+    // Empêcher le défilement de la page en arrière-plan
+    document.body.style.overflow = 'hidden';
+}
+
+    // Fermer le modal
+    function closeFileModal() {
+      fileModal.classList.remove('active');
+      document.body.style.overflow = '';
+      
+      // Arrêter les médias lorsqu'on ferme le modal
+      const videos = modalPreview.querySelectorAll('video');
+      const audios = modalPreview.querySelectorAll('audio');
+      
+      videos.forEach(video => {
+        video.pause();
+        video.currentTime = 0;
+      });
+      
+      audios.forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+    }
+
+    // Gestion des clics sur les éléments de la galerie
+    function setupGalleryItemClicks() {
+      const items = document.querySelectorAll('.gallery-item');
+      items.forEach(item => {
+        item.addEventListener('click', (e) => {
+          // Ne pas ouvrir le modal si on clique sur un bouton
+          if (e.target.closest('.copy-link-btn') || e.target.closest('.download-btn') || e.target.closest('.exclusive-btn')) {
+            return;
+          }
+          showFileModal(item);
+        });
+      });
+    }
+
+    // Gestion du bouton de copie dans le modal
+    modalCopyBtn.addEventListener('click', () => {
+      const link = modalDownloadBtn.href.split('?url=')[1].split('&')[0];
+      navigator.clipboard.writeText(decodeURIComponent(link))
+        .then(() => {
+          const originalText = modalCopyBtn.querySelector('span').textContent;
+          modalCopyBtn.querySelector('span').textContent = 'Link copied!';
+          setTimeout(() => {
+            modalCopyBtn.querySelector('span').textContent = originalText;
+          }, 2000);
+        })
+        .catch(err => {
+          console.error('Error copying link: ', err);
+        });
+    });
+
+    // Fermer le modal avec le bouton
+    closeModal.addEventListener('click', closeFileModal);
+
+    // Fermer le modal en cliquant à l'extérieur
+    fileModal.addEventListener('click', (e) => {
+      if (e.target === fileModal) {
+        closeFileModal();
+      }
+    });
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', function() {
+      filterAndDisplay();
+      lazyLoadImages();
+      setupCopyLinkButtons();
+      setupExclusiveButtons();
+      setupGalleryItemClicks();
+    });
+
+    // Événements
+    searchInput.addEventListener("input", filterAndDisplay);
+    filterSelect.addEventListener("change", filterAndDisplay);
+    ascSortBtn.addEventListener("click", () => sortGallery(true));
+    descSortBtn.addEventListener("click", () => sortGallery(false));
+  </script>
+</body>
+</html>

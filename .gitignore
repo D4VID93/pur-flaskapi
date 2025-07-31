@@ -1,0 +1,12 @@
+# Ne pas versionner le fichier contenant les clés secrètes
+.env
+
+# Cache Python
+__pycache__/
+
+# Dossiers spécifiques à certains éditeurs
+.vscode/
+*.code-workspace
+
+# Fichiers système
+*.DS_Store

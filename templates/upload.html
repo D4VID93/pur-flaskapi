@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Upload images - Media Library</title>
+  <link rel="icon" href="/static/pur_logo_upload.png" type="image/x-icon">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f8fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      background-color: #16677c;
+      padding: 12px 20px;
+    }
+
+    .logo {
+      height: 48px;
+      background-color: white;
+      border-radius: 6px;
+      padding: 4px;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin-top: 40px;
+      color: #16677c;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .upload-container {
+      margin-top: 30px;
+      padding: 40px;
+      border: 3px dashed #16677c;
+      background-color: #ffffff;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 600px;
+      text-align: center;
+      transition: background-color 0.3s ease;
+    }
+
+    .upload-container.dragover {
+      background-color: #e0f7ff;
+    }
+
+    .upload-container input[type="file"] {
+      display: none;
+    }
+
+    .upload-btn,
+    .send-btn {
+      background-color: #16677c;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 25px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background-color 0.3s ease;
+    }
+
+    .upload-btn:hover,
+    .send-btn:hover {
+      background-color: #145a66;
+    }
+
+    .send-btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .message {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    .message.success {
+      color: green;
+    }
+
+    .message.error {
+      color: red;
+    }
+
+    ul.file-list {
+      list-style: none;
+      padding: 0;
+      margin-top: 10px;
+      text-align: left;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    ul.file-list li {
+      font-size: 14px;
+      margin: 6px 0;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    ul.file-list li.invalid {
+      color: red;
+    }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      color: red;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .file-name-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .file-note {
+      font-size: 12px;
+      color: red;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      overflow: auto;
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 25px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      position: sticky;
+      top: 0;
+      background-color: #fefefe;
+      padding: 10px 0;
+      z-index: 10;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #16677c;
+    }
+
+    .close-btn {
+      color: #aaa;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close-btn:hover {
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .form-group input[type="text"],
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .tag {
+      background-color: #e0f7ff;
+      color: #16677c;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+    }
+
+    .tag-remove {
+      margin-left: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .tag-input-container {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tag-input {
+      flex-grow: 1;
+    }
+
+    .add-tag-btn {
+      background-color: #16677c;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0 12px;
+      cursor: pointer;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 30px;
+      position: sticky;
+      bottom: 0;
+      background-color: #fefefe;
+      padding: 15px 0;
+      z-index: 10;
+    }
+
+    .cancel-btn {
+      background-color: #f0f0f0;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+
+    .save-btn {
+      background-color: #16677c;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+
+    .preview-image {
+      max-width: 100%;
+      max-height: 200px;
+      margin: 10px 0;
+      border-radius: 6px;
+      object-fit: contain;
+    }
+
+    .loading-spinner {
+      display: none;
+      margin: 20px auto;
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top: 4px solid #16677c;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    .select-tags-container {
+      margin-top: 10px;
+    }
+
+    .select-tags {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      margin-bottom: 10px;
+    }
+
+    .tag-category {
+      font-weight: bold;
+      color: #16677c;
+      margin-top: 10px;
+      display: block;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="{{ url_for('static', filename='01_New_PUR_LOGO_Color.png') }}" alt="Logo PUR" class="logo">
+  </header>
+
+  <main>
+    <h1>Upload images to the Media Library</h1>
+
+    <div class="upload-container" id="drop-area">
+      <p>Drag and drop your files here</p>
+      <p>or</p>
+      <label for="fileElem" class="upload-btn">Browse your files</label>
+      <input type="file" id="fileElem" multiple accept="image/*,.zip">
+      <ul id="fileList" class="file-list"></ul>
+      <div id="loadingSpinner" class="loading-spinner"></div>
+      <button id="sendBtn" class="send-btn" disabled>Send</button>
+      <div id="msg" class="message"></div>
+      <div id="warning" class="message" style="color: orange;"></div>
+    </div>
+  </main>
+
+  <!-- Modal for file details -->
+  <div id="fileDetailsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">Add file details</span>
+        <span class="close-btn">&times;</span>
+      </div>
+      <div class="form-group">
+        <label for="filePreview">Preview:</label>
+        <img id="filePreview" class="preview-image" src="" alt="Preview">
+      </div>
+      <div class="form-group">
+        <label for="fileDescription">Description:</label>
+        <textarea id="fileDescription" placeholder="Enter a description for this file"></textarea>
+      </div>
+      <div class="form-group">
+    <label for="fileEventDate">Event Date (DD-MM-YYYY):</label>
+    <input type="date" id="fileEventDate" class="date-input">
+    </div>
+      <div class="form-group">
+        <label for="fileTags">Tags:</label>
+        <div class="select-tags-container">
+
+        <!-- Ajoutez cette section après les autres menus déroulants de tags -->
+          <span class="tag-category">Region:</span>
+          <select class="select-tags" id="regionTags" onchange="addTagFromSelect(this)">
+            <option value="">(No Value)</option>
+            <option value="Afghanistan">Afghanistan</option>
+            <option value="Albania">Albania</option>
+            <option value="Algeria">Algeria</option>
+            <option value="Andorra">Andorra</option>
+            <option value="Angola">Angola</option>
+            <option value="Antigua and Barbuda">Antigua and Barbuda</option>
+            <option value="Argentina">Argentina</option>
+            <option value="Armenia">Armenia</option>
+            <option value="Australia">Australia</option>
+            <option value="Austria">Austria</option>
+            <option value="Azerbaijan">Azerbaijan</option>
+            <option value="Bahamas">Bahamas</option>
+            <option value="Bahrain">Bahrain</option>
+            <option value="Bangladesh">Bangladesh</option>
+            <option value="Barbados">Barbados</option>
+            <option value="Belarus">Belarus</option>
+            <option value="Belgium">Belgium</option>
+            <option value="Belize">Belize</option>
+            <option value="Benin">Benin</option>
+            <option value="Bhutan">Bhutan</option>
+            <option value="Bolivia">Bolivia</option>
+            <option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option>
+            <option value="Botswana">Botswana</option>
+            <option value="Brazil">Brazil</option>
+            <option value="Brunei">Brunei</option>
+            <option value="Bulgaria">Bulgaria</option>
+            <option value="Burkina Faso">Burkina Faso</option>
+            <option value="Burundi">Burundi</option>
+            <option value="Côte d'Ivoire">Côte d'Ivoire</option>
+            <option value="Cabo Verde">Cabo Verde</option>
+            <option value="Cambodia">Cambodia</option>
+            <option value="Cameroon">Cameroon</option>
+            <option value="Canada">Canada</option>
+            <option value="Central African Republic">Central African Republic</option>
+            <option value="Chad">Chad</option>
+            <option value="Chile">Chile</option>
+            <option value="China">China</option>
+            <option value="Colombia">Colombia</option>
+            <option value="Comoros">Comoros</option>
+            <option value="Congo (Congo-Brazzaville)">Congo (Congo-Brazzaville)</option>
+            <option value="Costa Rica">Costa Rica</option>
+            <option value="Croatia">Croatia</option>
+            <option value="Cuba">Cuba</option>
+            <option value="Cyprus">Cyprus</option>
+            <option value="Czechia">Czechia</option>
+            <option value="Democratic Republic of the Congo">Democratic Republic of the Congo</option>
+            <option value="Denmark">Denmark</option>
+            <option value="Djibouti">Djibouti</option>
+            <option value="Dominica">Dominica</option>
+            <option value="Dominican Republic">Dominican Republic</option>
+            <option value="Ecuador">Ecuador</option>
+            <option value="Egypt">Egypt</option>
+            <option value="El Salvador">El Salvador</option>
+            <option value="Equatorial Guinea">Equatorial Guinea</option>
+            <option value="Eritrea">Eritrea</option>
+            <option value="Estonia">Estonia</option>
+            <option value="Eswatini">Eswatini</option>
+            <option value="Ethiopia">Ethiopia</option>
+            <option value="Fiji">Fiji</option>
+            <option value="Finland">Finland</option>
+            <option value="France">France</option>
+            <option value="Gabon">Gabon</option>
+            <option value="Gambia">Gambia</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Germany">Germany</option>
+            <option value="Ghana">Ghana</option>
+            <option value="Greece">Greece</option>
+            <option value="Grenada">Grenada</option>
+            <option value="Guatemala">Guatemala</option>
+            <option value="Guinea">Guinea</option>
+            <option value="Guinea-Bissau">Guinea-Bissau</option>
+            <option value="Guyana">Guyana</option>
+            <option value="Haiti">Haiti</option>
+            <option value="Holy See">Holy See</option>
+            <option value="Honduras">Honduras</option>
+            <option value="Hungary">Hungary</option>
+            <option value="Iceland">Iceland</option>
+            <option value="India">India</option>
+            <option value="Indonesia">Indonesia</option>
+            <option value="Iran">Iran</option>
+            <option value="Iraq">Iraq</option>
+            <option value="Ireland">Ireland</option>
+            <option value="Israel">Israel</option>
+            <option value="Italy">Italy</option>
+            <option value="Jamaica">Jamaica</option>
+            <option value="Japan">Japan</option>
+            <option value="Jordan">Jordan</option>
+            <option value="Kazakhstan">Kazakhstan</option>
+            <option value="Kenya">Kenya</option>
+            <option value="Kiribati">Kiribati</option>
+            <option value="Kuwait">Kuwait</option>
+            <option value="Kyrgyzstan">Kyrgyzstan</option>
+            <option value="Laos">Laos</option>
+            <option value="Latvia">Latvia</option>
+            <option value="Lebanon">Lebanon</option>
+            <option value="Lesotho">Lesotho</option>
+            <option value="Liberia">Liberia</option>
+            <option value="Libya">Libya</option>
+            <option value="Liechtenstein">Liechtenstein</option>
+            <option value="Lithuania">Lithuania</option>
+            <option value="Luxembourg">Luxembourg</option>
+            <option value="Madagascar">Madagascar</option>
+            <option value="Malawi">Malawi</option>
+            <option value="Malaysia">Malaysia</option>
+            <option value="Maldives">Maldives</option>
+            <option value="Mali">Mali</option>
+            <option value="Malta">Malta</option>
+            <option value="Marshall Islands">Marshall Islands</option>
+            <option value="Mauritania">Mauritania</option>
+            <option value="Mauritius">Mauritius</option>
+            <option value="Mexico">Mexico</option>
+            <option value="Micronesia">Micronesia</option>
+            <option value="Moldova">Moldova</option>
+            <option value="Monaco">Monaco</option>
+            <option value="Mongolia">Mongolia</option>
+            <option value="Montenegro">Montenegro</option>
+            <option value="Morocco">Morocco</option>
+            <option value="Mozambique">Mozambique</option>
+            <option value="Myanmar">Myanmar</option>
+            <option value="Namibia">Namibia</option>
+            <option value="Nauru">Nauru</option>
+            <option value="Nepal">Nepal</option>
+            <option value="Netherlands">Netherlands</option>
+            <option value="New Zealand">New Zealand</option>
+            <option value="Nicaragua">Nicaragua</option>
+            <option value="Niger">Niger</option>
+            <option value="Nigeria">Nigeria</option>
+            <option value="North Korea">North Korea</option>
+            <option value="North Macedonia">North Macedonia</option>
+            <option value="Norway">Norway</option>
+            <option value="Oman">Oman</option>
+            <option value="Pakistan">Pakistan</option>
+            <option value="Palau">Palau</option>
+            <option value="Palestine State">Palestine State</option>
+            <option value="Panama">Panama</option>
+            <option value="Papua New Guinea">Papua New Guinea</option>
+            <option value="Paraguay">Paraguay</option>
+            <option value="Peru">Peru</option>
+            <option value="Philippines">Philippines</option>
+            <option value="Poland">Poland</option>
+            <option value="Portugal">Portugal</option>
+            <option value="Qatar">Qatar</option>
+            <option value="Romania">Romania</option>
+            <option value="Russia">Russia</option>
+            <option value="Rwanda">Rwanda</option>
+            <option value="Saint Kitts and Nevis">Saint Kitts and Nevis</option>
+            <option value="Saint Lucia">Saint Lucia</option>
+            <option value="Saint Vincent and the Grenadines">Saint Vincent and the Grenadines</option>
+            <option value="Samoa">Samoa</option>
+            <option value="San Marino">San Marino</option>
+            <option value="Sao Tome and Principe">Sao Tome and Principe</option>
+            <option value="Saudi Arabia">Saudi Arabia</option>
+            <option value="Senegal">Senegal</option>
+            <option value="Serbia">Serbia</option>
+            <option value="Seychelles">Seychelles</option>
+            <option value="Sierra Leone">Sierra Leone</option>
+            <option value="Singapore">Singapore</option>
+            <option value="Slovakia">Slovakia</option>
+            <option value="Slovenia">Slovenia</option>
+            <option value="Solomon Islands">Solomon Islands</option>
+            <option value="Somalia">Somalia</option>
+            <option value="South Africa">South Africa</option>
+            <option value="South Korea">South Korea</option>
+            <option value="South Sudan">South Sudan</option>
+            <option value="Spain">Spain</option>
+            <option value="Sri Lanka">Sri Lanka</option>
+            <option value="Sudan">Sudan</option>
+            <option value="Suriname">Suriname</option>
+            <option value="Sweden">Sweden</option>
+            <option value="Switzerland">Switzerland</option>
+            <option value="Syria">Syria</option>
+            <option value="Tajikistan">Tajikistan</option>
+            <option value="Tanzania">Tanzania</option>
+            <option value="Thailand">Thailand</option>
+            <option value="Timor-Leste">Timor-Leste</option>
+            <option value="Togo">Togo</option>
+            <option value="Tonga">Tonga</option>
+            <option value="Trinidad and Tobago">Trinidad and Tobago</option>
+            <option value="Tunisia">Tunisia</option>
+            <option value="Turkey">Turkey</option>
+            <option value="Turkmenistan">Turkmenistan</option>
+            <option value="Tuvalu">Tuvalu</option>
+            <option value="Uganda">Uganda</option>
+            <option value="Ukraine">Ukraine</option>
+            <option value="United Arab Emirates">United Arab Emirates</option>
+            <option value="United Kingdom">United Kingdom</option>
+            <option value="United States of America">United States of America</option>
+            <option value="Uruguay">Uruguay</option>
+            <option value="Uzbekistan">Uzbekistan</option>
+            <option value="Vanuatu">Vanuatu</option>
+            <option value="Venezuela">Venezuela</option>
+            <option value="Vietnam">Vietnam</option>
+            <option value="Yemen">Yemen</option>
+            <option value="Zambia">Zambia</option>
+            <option value="Zimbabwe">Zimbabwe</option>
+          </select>
+
+          <span class="tag-category">Project Type:</span>
+          <select class="select-tags" id="projectTypeTags" onchange="addTagFromSelect(this)">
+            <option value="">(No Value)</option>
+            <option value="Agroforestry project">Agroforestry project</option>
+            <option value="Animal project">Animal project</option>
+            <option value="Awareness-raising project">Awareness-raising project</option>
+            <option value="Certified Carbon project">Certified Carbon project</option>
+            <option value="Cocoa project">Cocoa project</option>
+            <option value="Coffee project">Coffee project</option>
+            <option value="Conservation project">Conservation project</option>
+            <option value="Livelihood project">Livelihood project</option>
+            <option value="Marine project">Marine project</option>
+            <option value="Reforestation project">Reforestation project</option>
+            <option value="Regen Ag project">Regen Ag project</option>
+          </select>
+
+          <span class="tag-category">Activity:</span>
+          <select class="select-tags" id="activityTags" onchange="addTagFromSelect(this)">
+            <option value="">(No Value)</option>
+            <option value="Agroforestry (Pre/Post)">Agroforestry (Pre/Post)</option>
+            <option value="Awareness">Awareness</option>
+            <option value="Beekeeping">Beekeeping</option>
+            <option value="Biomass Inventory">Biomass Inventory</option>
+            <option value="Carb Audit">Carb Audit</option>
+            <option value="Carbon Certification">Carbon Certification</option>
+            <option value="Cookstove">Cookstove</option>
+            <option value="Cooperative">Cooperative</option>
+            <option value="Feasibility Study">Feasibility Study</option>
+            <option value="Field Study">Field Study</option>
+            <option value="Field Visit">Field Visit</option>
+            <option value="Harvesting">Harvesting</option>
+            <option value="Impact Study">Impact Study</option>
+            <option value="Income Diversification">Income Diversification</option>
+            <option value="Monitoring">Monitoring</option>
+            <option value="Parcel Pre/Pruning">Parcel Pre/Pruning</option>
+            <option value="Processing">Processing</option>
+            <option value="PreRegistration">PreRegistration</option>
+            <option value="Socialization">Socialization</option>
+            <option value="Soil test">Soil test</option>
+            <option value="Training">Training</option>
+            <option value="Transportation">Transportation</option>
+            <option value="Theater Tour">Theater Tour</option>
+            <option value="Tree Distribution">Tree Distribution</option>
+            <option value="Tree Nursery">Tree Nursery</option>
+            <option value="Tree Planting">Tree Planting</option>
+          </select>
+
+          <span class="tag-category">Commodity:</span>
+          <select class="select-tags" id="commodityTags" onchange="addTagFromSelect(this)">
+            <option value="">(No Value)</option>
+            <option value="Banana">Banana</option>
+            <option value="Coffee">Coffee</option>
+            <option value="Cocoa">Cocoa</option>
+            <option value="Cacao">Cacao</option>
+            <option value="Carbon">Carbon</option>
+            <option value="Corn">Corn</option>
+            <option value="Cotton">Cotton</option>
+            <option value="Cereals">Cereals</option>
+            <option value="Coconut">Coconut</option>
+            <option value="Rice">Rice</option>
+            <option value="Sugarcane">Sugarcane</option>
+            <option value="Timber">Timber</option>
+            <option value="Leather">Leather</option>
+            <option value="Medicinal plants">Medicinal plants</option>
+            <option value="Vanilla">Vanilla</option>
+            <option value="Fruits">Fruits</option>
+            <option value="Vegetables">Vegetables</option>
+            <option value="Nuts">Nuts</option>
+            <option value="Wine">Wine</option>
+            <option value="Honey">Honey</option>
+            <option value="Dairy">Dairy</option>
+            <option value="Flowers">Flowers</option>
+            <option value="Wool">Wool</option>
+            <option value="Silk">Silk</option>
+            <option value="Rubber">Rubber</option>
+            <option value="Tea">Tea</option>
+          </select>
+
+          <span class="tag-category">Challenge:</span>
+          <select class="select-tags" id="challengeTags" onchange="addTagFromSelect(this)">
+            <option value="">(No Value)</option>
+            <option value="Animal Welfare">Animal Welfare</option>
+            <option value="Bad agricultural practice">Bad agricultural practice</option>
+            <option value="Deforestation">Deforestation</option>
+            <option value="Desertification">Desertification</option>
+            <option value="Drought">Drought</option>
+            <option value="Poor Livelihood">Poor Livelihood</option>
+            <option value="Soil erosion">Soil erosion</option>
+            <option value="Soil impaction">Soil impaction</option>
+            <option value="Wildfires">Wildfires</option>
+          </select>
+
+          <span class="tag-category">Ecosystem Service:</span>
+          <select class="select-tags" id="ecosystemServiceTags" onchange="addTagFromSelect(this)">
+            <option value="">(No Value)</option>
+            <option value="Air Quality">Air Quality</option>
+            <option value="Biodiversity">Biodiversity</option>
+            <option value="Climate regulation">Climate regulation</option>
+            <option value="Cover cropping">Cover cropping</option>
+            <option value="Cultural/Aesthetic">Cultural/Aesthetic</option>
+            <option value="Disease and pest regulation">Disease and pest regulation</option>
+            <option value="Food">Food</option>
+            <option value="Medicinal Resources">Medicinal Resources</option>
+            <option value="Nutrient cycling">Nutrient cycling</option>
+            <option value="Photosynthesis">Photosynthesis</option>
+            <option value="Pollination">Pollination</option>
+            <option value="Raw material">Raw material</option>
+            <option value="Soil formation">Soil formation</option>
+            <option value="Water regulation/Purification">Water regulation/Purification</option>
+          </select>
+        </div>
+        
+        <div class="tag-input-container">
+          <input type="text" id="fileTags" class="tag-input" placeholder="Add custom tags...">
+          <button id="addTagBtn" class="add-tag-btn">+</button>
+        </div>
+        <div id="tagsContainer" class="tags-container"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelBtn" class="cancel-btn">Cancel</button>
+        <button id="saveBtn" class="save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileEventDate = document.getElementById("fileEventDate");
+    const dropArea = document.getElementById("drop-area");
+    const fileInput = document.getElementById("fileElem");
+    const sendBtn = document.getElementById("sendBtn");
+    const msg = document.getElementById("msg");
+    const fileList = document.getElementById("fileList");
+    const loadingSpinner = document.getElementById("loadingSpinner");
+    const MAX_FILES = 7;
+    let filesToUpload = [];
+    let fileDetails = {};
+
+    // Modal elements
+    const modal = document.getElementById("fileDetailsModal");
+    const closeBtn = document.querySelector(".close-btn");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const filePreview = document.getElementById("filePreview");
+    const fileDescription = document.getElementById("fileDescription");
+    const fileTags = document.getElementById("fileTags");
+    const addTagBtn = document.getElementById("addTagBtn");
+    const tagsContainer = document.getElementById("tagsContainer");
+    let currentFileIndex = -1;
+
+    // Event listeners for drag and drop
+    dropArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropArea.classList.add("dragover");
+    });
+
+    dropArea.addEventListener("dragleave", () => {
+      dropArea.classList.remove("dragover");
+    });
+
+    dropArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropArea.classList.remove("dragover");
+      handleFiles([...e.dataTransfer.files]);
+    });
+
+    fileInput.addEventListener("change", () => {
+      handleFiles([...fileInput.files]);
+    });
+
+    // Modal event listeners
+    closeBtn.addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+
+    saveBtn.addEventListener("click", () => {
+      if (currentFileIndex >= 0 && currentFileIndex < filesToUpload.length) {
+        const file = filesToUpload[currentFileIndex];
+        const description = fileDescription.value.trim();
+        const eventDate = fileEventDate.value;
+        const tags = Array.from(tagsContainer.querySelectorAll(".tag"))
+          .map(tag => tag.textContent.replace("×", "").trim());
+        
+        fileDetails[file.name] = {
+            description,
+            tags,
+            eventDate
+        };
+
+        updateFileListItem(currentFileIndex, description, tags, eventDate);
+      }
+      modal.style.display = "none";
+    });
+
+    addTagBtn.addEventListener("click", addTag);
+    fileTags.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        addTag();
+      }
+    });
+
+    function addTagFromSelect(selectElement) {
+      if (selectElement.value) {
+        // Check if tag already exists
+        const existingTags = Array.from(tagsContainer.querySelectorAll('.tag'))
+          .map(tag => tag.textContent.replace('×', '').trim());
+        
+        if (!existingTags.includes(selectElement.value)) {
+          const tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.innerHTML = `${selectElement.value}<span class="tag-remove">×</span>`;
+          
+          tag.querySelector('.tag-remove').addEventListener('click', () => {
+            tag.remove();
+          });
+          
+          tagsContainer.appendChild(tag);
+        }
+        
+        // Reset selection
+        selectElement.selectedIndex = 0;
+      }
+    }
+
+    function addTag() {
+      const tagText = fileTags.value.trim();
+      if (tagText) {
+        const tag = document.createElement("span");
+        tag.className = "tag";
+        tag.innerHTML = `${tagText}<span class="tag-remove">×</span>`;
+        
+        tag.querySelector(".tag-remove").addEventListener("click", () => {
+          tag.remove();
+        });
+        
+        tagsContainer.appendChild(tag);
+        fileTags.value = "";
+      }
+    }
+
+    async function extractZipFile(zipFile) {
+      loadingSpinner.style.display = "block";
+      sendBtn.disabled = true;
+      msg.textContent = "Extracting ZIP file...";
+      
+      try {
+        const zip = new JSZip();
+        const zipData = await zip.loadAsync(zipFile);
+        const extractedFiles = [];
+        
+        // Parcourir tous les fichiers dans le ZIP
+        const filePromises = [];
+        zip.forEach((relativePath, zipEntry) => {
+          if (!zipEntry.dir) { // Ignorer les répertoires
+            filePromises.push(
+              zipEntry.async("blob").then(blob => {
+                const extractedFile = new File([blob], zipEntry.name, {
+                  type: blob.type,
+                  lastModified: Date.now()
+                });
+                extractedFiles.push(extractedFile);
+              })
+            );
+          }
+        });
+        
+        await Promise.all(filePromises);
+        return extractedFiles;
+      } finally {
+        loadingSpinner.style.display = "none";
+        sendBtn.disabled = false;
+        msg.textContent = "";
+      }
+    }
+
+    async function handleFiles(newFiles) {
+      const warningDiv = document.getElementById("warning");
+      let duplicateDetected = false;
+      let forbiddenExtensionDetected = false;
+      const forbiddenExtensions = ['.heic', '.thm', '.emf'];
+
+      // Traiter chaque fichier séquentiellement
+      for (const file of newFiles) {
+        const fileExt = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+        
+        if (forbiddenExtensions.includes(fileExt)) {
+          forbiddenExtensionDetected = true;
+          continue;
+        }
+
+        // Vérifier si c'est un fichier ZIP
+        if (fileExt === '.zip') {
+          try {
+            const zipFiles = await extractZipFile(file);
+            for (const zipFile of zipFiles) {
+              const zipFileExt = zipFile.name.slice(zipFile.name.lastIndexOf('.')).toLowerCase();
+              
+              if (!forbiddenExtensions.includes(zipFileExt)) {
+                const alreadyExists = filesToUpload.some(existing => existing.name === zipFile.name);
+                if (!alreadyExists) {
+                  filesToUpload.push(zipFile);
+                  openFileDetailsModal(filesToUpload.length - 1);
+                } else {
+                  duplicateDetected = true;
+                }
+              } else {
+                forbiddenExtensionDetected = true;
+              }
+            }
+          } catch (error) {
+            console.error("Error extracting ZIP file:", error);
+            warningDiv.style.color = "orange";
+            warningDiv.textContent = "⚠️ Error extracting ZIP file. Please check the file and try again.";
+            setTimeout(() => {
+              warningDiv.textContent = "";
+            }, 5000);
+          }
+          continue;
+        }
+
+        // Pour les fichiers normaux (non-ZIP)
+        const alreadyExists = filesToUpload.some(existing => existing.name === file.name);
+        if (!alreadyExists) {
+          filesToUpload.push(file);
+          openFileDetailsModal(filesToUpload.length - 1);
+        } else {
+          duplicateDetected = true;
+        }
+      }
+
+      // Afficher les messages d'avertissement
+      if (duplicateDetected) {
+        warningDiv.textContent = "⚠️ Some files were already added";
+        setTimeout(() => {
+          warningDiv.textContent = "";
+        }, 3000);
+      }
+
+      if (forbiddenExtensionDetected) {
+        warningDiv.style.color = "orange";
+        warningDiv.textContent = "⚠️ .heic, .thm, and .emf formats are not accepted. Please convert these files to a suitable format (such as .jpg or .png) before uploading.";
+        setTimeout(() => {
+          warningDiv.textContent = "";
+        }, 7000);
+      }
+
+      renderFileList();
+    }
+
+    function openFileDetailsModal(index) {
+      if (index >= 0 && index < filesToUpload.length) {
+        currentFileIndex = index;
+        const file = filesToUpload[index];
+        
+        // Reset modal
+        fileDescription.value = "";
+        tagsContainer.innerHTML = "";
+        fileTags.value = "";
+        
+        // Set preview
+        if (file.type.startsWith("image/")) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            filePreview.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        } else {
+          filePreview.src = "";
+          filePreview.alt = "No preview available";
+        }
+        
+        // Set existing details if any
+        if (fileDetails[file.name]) {
+          fileDescription.value = fileDetails[file.name].description || "";
+          fileEventDate.value = fileDetails[file.name]?.eventDate || "";
+          (fileDetails[file.name].tags || []).forEach(tag => {
+            const tagEl = document.createElement("span");
+            tagEl.className = "tag";
+            tagEl.innerHTML = `${tag}<span class="tag-remove">×</span>`;
+            tagEl.querySelector(".tag-remove").addEventListener("click", () => {
+              tagEl.remove();
+            });
+            tagsContainer.appendChild(tagEl);
+          });
+        }
+        
+        modal.style.display = "block";
+      }
+    }
+
+    function updateFileListItem(index, description, tags) {
+      const listItems = fileList.querySelectorAll("li");
+      if (index >= 0 && index < listItems.length) {
+        const fileNameContainer = listItems[index].querySelector(".file-name-container");
+        
+        // Add description icon if description exists
+        if (description) {
+          let descIcon = fileNameContainer.querySelector(".desc-icon");
+          if (!descIcon) {
+            descIcon = document.createElement("span");
+            descIcon.className = "desc-icon";
+            descIcon.innerHTML = " 📝";
+            fileNameContainer.insertBefore(descIcon, fileNameContainer.firstChild);
+          }
+        }
+        
+        // Add tags icon if tags exist
+        if (tags && tags.length > 0) {
+          let tagsIcon = fileNameContainer.querySelector(".tags-icon");
+          if (!tagsIcon) {
+            tagsIcon = document.createElement("span");
+            tagsIcon.className = "tags-icon";
+            tagsIcon.innerHTML = " 🏷️";
+            fileNameContainer.insertBefore(tagsIcon, fileNameContainer.firstChild);
+          }
+        }
+      }
+    }
+
+    function renderFileList() {
+      fileList.innerHTML = "";
+
+      filesToUpload.forEach((file, index) => {
+        const li = document.createElement("li");
+        const fileContainer = document.createElement("span");
+        fileContainer.className = "file-name-container";
+
+        const fileName = document.createElement("span");
+        fileName.textContent = file.name;
+
+        const editBtn = document.createElement("button");
+        editBtn.innerHTML = "✏️";
+        editBtn.style.marginRight = "8px";
+        editBtn.style.background = "none";
+        editBtn.style.border = "none";
+        editBtn.style.cursor = "pointer";
+        editBtn.onclick = () => openFileDetailsModal(index);
+
+        const removeBtn = document.createElement("button");
+        removeBtn.innerHTML = "❌";
+        removeBtn.className = "remove-btn";
+        removeBtn.onclick = () => {
+          filesToUpload.splice(index, 1);
+          delete fileDetails[file.name];
+          renderFileList();
+        };
+
+        fileContainer.appendChild(fileName);
+
+        if (index >= MAX_FILES) {
+          li.classList.add("invalid");
+          const note = document.createElement("span");
+          note.className = "file-note";
+          note.textContent = " (Maximum reached)";
+          fileContainer.appendChild(note);
+        }
+
+        li.appendChild(editBtn);
+        li.appendChild(fileContainer);
+        li.appendChild(removeBtn);
+        fileList.appendChild(li);
+
+        // Show icons if details exist
+        if (fileDetails[file.name]) {
+          updateFileListItem(index, fileDetails[file.name].description, fileDetails[file.name].tags);
+        }
+      });
+
+      updateMessageAndButton();
+    }
+
+    function updateMessageAndButton() {
+      const validFiles = filesToUpload.slice(0, MAX_FILES);
+      const tooMany = filesToUpload.length > MAX_FILES;
+
+      if (validFiles.length > 0 && !tooMany) {
+        msg.className = "message success";
+        msg.textContent = `${validFiles.length} file(s) ready to be sent.`;
+        sendBtn.disabled = false;
+      } else if (validFiles.length > 0 && tooMany) {
+        msg.className = "message error";
+        msg.textContent = `⚠️ You can upload a maximum of ${MAX_FILES} files. Remove ${filesToUpload.length - MAX_FILES} file(s).`;
+        sendBtn.disabled = true;
+      } else {
+        msg.className = "message";
+        msg.textContent = "No file selected.";
+        sendBtn.disabled = true;
+      }
+    }
+
+    sendBtn.addEventListener("click", async () => {
+      const filesToSend = filesToUpload.slice(0, MAX_FILES);
+      if (filesToSend.length === 0) return;
+
+      const formData = new FormData();
+      const url = `/upload?token=${encodeURIComponent("superTokenOps2025")}`;
+      filesToSend.forEach((file, index) => {
+      formData.append("files", file);
+      const details = fileDetails[file.name] || {};
+      formData.append("descriptions", details.description || "");
+      formData.append("tags", JSON.stringify(details.tags || []));
+      
+      // Convertir la date de YYYY-MM-DD (format input date) vers DD-MM-YYYY
+      let formattedDate = "";
+      if (details.eventDate) {
+          const [year, month, day] = details.eventDate.split('-');
+          formattedDate = `${day}-${month}-${year}`;
+      }
+      formData.append("date_events", formattedDate);
+  });
+
+      try {
+          loadingSpinner.style.display = "block";
+          sendBtn.disabled = true;
+          msg.className = "message";
+          msg.textContent = "sending ...";
+
+          const response = await fetch(url, {
+              method: "POST",
+              body: formData
+          });
+
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+              const text = await response.text();
+              console.error("Réponse non-JSON reçue:", text.substring(0, 200));
+              throw new Error("Le serveur a renvoyé une réponse inattendue");
+          }
+
+          const result = await response.json();
+
+          if (!response.ok) {
+              throw new Error(result.message || "Échec de l'upload");
+          }
+          
+          filesToUpload = [];
+          fileDetails = {};
+          renderFileList();
+          msg.className = "message success";
+          msg.textContent = "✅ Upload successful !";
+          
+      } catch (error) {
+          console.error("Erreur d'upload:", error);
+          msg.className = "message error";
+          msg.textContent = `❌ Error: ${error.message || "An error has occurred"}`;
+          
+          console.error("Détails de l'erreur:", {
+              name: error.name,
+              message: error.message,
+              stack: error.stack
+          });
+      } finally {
+          loadingSpinner.style.display = "none";
+          sendBtn.disabled = false;
+      }
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
