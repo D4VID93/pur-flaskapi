@@ -1,7 +1,6 @@
-Flask
-flask-cors
-gunicorn
+flask
 psycopg2-binary
-requests
-azure-storage-blob
 python-dotenv
+azure-storage-blob
+msal
+requests

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - PUR Projet Media Library</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="icon/favicon.ico" type="image/x-icon">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.2) 100%), 
+                        url('static/foret.jpg') no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
+            font-family: 'Montserrat', Arial, sans-serif;
+        }
+        .pur-logo-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
+        .pur-logo {
+            height: 50px;
+            display: block;
+        }
+        .register-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            padding-top: 120px;
+        }
+        .register-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            background-color: rgba(255,255,255,0.95);
+        }
+        .register-header {
+            background-color: white;
+            padding: 25px;
+            border-bottom: 1px solid #eee;
+        }
+        .register-title {
+            color: #2c3e50;
+            font-weight: 700;
+            margin-bottom: 0;
+            text-align: center;
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+        }
+        .form-control {
+            border-radius: 8px;
+            padding: 12px 16px;
+            border: 1px solid #e0e0e0;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .register-btn {
+            background-color: #3498db;
+            border: none;
+            padding: 12px;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+        .register-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-1px);
+        }
+        .login-link {
+            text-align: center;
+            margin-top: 18px;
+            font-size: 0.95rem;
+            color: #666;
+        }
+        .login-link a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .form-text {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="pur-logo-container">
+        <img src="static/01_New_PUR_LOGO_Color.png" alt="PUR Logo" class="pur-logo">
+    </div>
+
+    <div class="register-container">
+        <div class="card register-card">
+            <div class="card-header register-header">
+                <h4 class="register-title">Create an account</h4>
+            </div>
+            <div class="card-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                <form method="POST" action="{{ url_for('register') }}">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                        <div class="form-text">Minimum 8 characters</div>
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm Password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 register-btn">Create account</button>
+                </form>
+                <div class="login-link">
+                    <p>Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

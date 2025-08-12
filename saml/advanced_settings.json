@@ -1,0 +1,20 @@
+{
+  "security": {
+    "authnRequestsSigned": false,
+    "logoutRequestSigned": true,
+    "logoutResponseSigned": true,
+    "wantAssertionsSigned": true,
+    "wantMessagesSigned": false
+  },
+  "contactPerson": {
+    "technical": {
+      "givenName": "David",
+      "emailAddress": "david.guney@pur.co"
+    }
+  },
+  "organization": {
+    "name": "PUR",
+    "displayname": "PUR",
+    "url": "https://www.pur.co"
+  }
+}

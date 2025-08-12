@@ -1,0 +1,17 @@
+{
+  "strict": true,
+  "sp": {
+    "entityId": "",
+    "assertionConsumerService": {
+      "url": "",
+      "binding": ""
+    }
+  },
+  "idp": {
+    "entityId": "",
+    "singleSignOnService": {
+      "url": "",
+      "binding": ""
+    }
+  }
+}
